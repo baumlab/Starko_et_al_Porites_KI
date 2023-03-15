@@ -1,0 +1,12 @@
+load("/Users/samstarko/Dropbox/R_projects/PoritesSurvival2/Data/Symbionts/Porites_Profiles.RData")
+Porites_Profiles
+View(12,755 )
+View(Porites_Profiles)
+head(Porites_Profiles)
+library(tidyverse)
+Porites_Profiles %>% as.data.frame() %>% colnames()
+Porites_Profiles %>% sample_data() %>% as.data.frame()
+?phyloseq
+Porites_Profiles %>% as.data.frame() %>% otu_table()
+Porites_Profiles %>% otu_table() %>% as.data.frame()
+Porites_Profiles %>% otu_table() %>% as.data.frame() %>% head()
