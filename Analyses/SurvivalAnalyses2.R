@@ -176,39 +176,21 @@ fisher.test(Contingency_Table, simulate.p.value = TRUE)
 
 #Now pairwise comparison of each combination
 #Remember to correct p-values for multiple comparisons
-Contingency_Table[,c(1,2)] %>% fisher.test(simulate.p.value = TRUE)
-Contingency_Table[,c(1,3)] %>% fisher.test(simulate.p.value = TRUE)
-Contingency_Table[,c(1,4)] %>% fisher.test(simulate.p.value = TRUE)
-Contingency_Table[,c(2,3)] %>% fisher.test(simulate.p.value = TRUE)
-Contingency_Table[,c(2,4)] %>% fisher.test(simulate.p.value = TRUE)
-Contingency_Table[,c(3,4)] %>% fisher.test(simulate.p.value = TRUE)
+Contingency_Table[,c(1,2)] %>% fisher.test(simulate.p.value = TRUE) # p = 0.26388
+Contingency_Table[,c(1,3)] %>% fisher.test(simulate.p.value = TRUE) # p = 0.00899** (Bay of Wrecks vs North Shore)
+Contingency_Table[,c(1,4)] %>% fisher.test(simulate.p.value = TRUE) # p = 0.00300** (Bay of Wrecks vs Vaskess/South lagoon)
+Contingency_Table[,c(2,3)] %>% fisher.test(simulate.p.value = TRUE) # p = 0.64140
+Contingency_Table[,c(2,4)] %>% fisher.test(simulate.p.value = TRUE) # p = 0.08394
+Contingency_Table[,c(3,4)] %>% fisher.test(simulate.p.value = TRUE) # p > 0.99
 
+##Multinomial regression for effect of disturbance
+#No significant effect
 
-Contingency_Table <- table(Before_col$Disturbance_cat, Before_col$Clade_dom)
-bf = contingencyTableBF(Contingency_Table, sampleType = "indepMulti", fixedMargin = "cols")
-bf
-
-chisq.test(Contingency_Table)
-
-
-
-# convert to a 2-dimensional table
-Contingency_Table2 <- Contingency_Table %>% as.data.frame()
-Contingency_Table2$Ordinal <- rownames(Contingency_Table2)
-
-
-library(coin)
-
-# Convert the data to a contingency table
-Contingency_Table <- xtabs(Freq ~ Var1 + Var2, data = Contingency_Table2)
-
-# Perform the Cochran-Armitage trend test
-res <- CochranArmitageTest(Contingency_Table, alternative = "two.sided")
-
-# View the results
-res
-
-
+Before_col$Disturbance_sqrt
+Before_col$Clade_dom
+model <- multinom(Clade_dom~Disturbance_sqrt, data = Before_col)
+summary(model)
+Anova(model)
 
 
 ##Test for impact of colony size (measured as "area")
@@ -243,6 +225,5 @@ plot_grid(g3, g1, g2, ncol = 1)
 
 plot_grid(surv, part)
 plot_grid(surv_rad, part_RAD)
-
 
 
