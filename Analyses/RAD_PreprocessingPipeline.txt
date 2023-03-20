@@ -1,0 +1,95 @@
+!/bin/bash
+#$ -V # inherit the submission environment
+#$ -cwd # start job in submission directory
+#$ -N trims  # job name, anything you want
+#$ -l h_rt=12:00:00 #maximum run time
+#$ -pe omp 16
+#$ -M james.e.fifer@gmail.com #your email
+#$ -m be
+
+module load perl/5.28.1
+
+
+/projectnb/davieslab/jfifer/Astrangia/2bRAD_trim_launch_dedup.pl fastq > trims
+
+#calculate number of raw reads per sample
+for i in *.tr0; do echo $i; echo $(cat $i|wc -l)/4|bc; done >>rawreads.txt
+
+# for reference-based analysis: trimming poor quality bases off ends:
+>trimse
+echo -e '#!/bin/bash \n#$ -V # inherit the submission environment \n#$ -cwd # start job in submission directory
+#$ -N trims  # job name, anything you want
+#$ -P davieslab
+#$ -pe omp 16
+#$ -l h_rt=12:00:00 #maximum run time
+#$ -M james.e.fifer@gmail.com #your email
+#$ -m be \n
+module load python3/3.8.10
+module load cutadapt/3.4'> trimse;
+for file in *.tr0; do
+echo "cutadapt -q 15,15 -m 25 -o ${file/.tr0/}.trim $file > ${file}_trimlog.txt" >> trimse;
+done
+
+GENOME_FASTA=/projectnb/davieslab/jfifer/Astrangia/References/coral_refgenome.fasta
+# mapping with --local option, enables clipping of mismatching ends (guards against deletions near ends of RAD tags)
+>maps
+echo -e '#!/bin/bash \n#$ -V # inherit the submission environment \n#$ -cwd # start job in submission directory
+#$ -N maps  # job name, anything you want
+#$ -P davieslab
+#$ -pe omp 16
+#$ -l h_rt=12:00:00 #maximum run time
+#$ -M james.e.fifer@gmail.com #your email
+#$ -m be \n
+module load bowtie2' >maps
+/projectnb/davieslab/jfifer/Japan_rad/2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA >> maps
+
+
+echo -e 'module load samtools' >s2b;
+for file in *.sam; do
+echo "samtools sort -O bam -o ${file/.sam/}.bam $file && samtools index ${file/.sam/}.bam">>s2b;
+done
+
+#remove the row that had duplicate barcodes
+rm -rf 3_5*
+
+ls *.bam>>bams
+
+grep overall maps2.e* >mappingrates
+cut -f1 -d ' ' mappingrates >mappingrates.tmp; paste mappingrates.tmp bams > mappingrates
+
+#calculate depth for each sample
+    ## Count per position depth per sample
+BAMLIST=bamscl
+
+
+>finddepth
+for SAMPLEBAM in `cat $BAMLIST`; do echo " \
+    samtools depth -aa $SAMPLEBAM | cut -f 3 | gzip > $SAMPLEBAM.depth.gz" >> finddepth; done
+
+ls *.depth.gz >depthlist
+echo -e '#!/bin/bash -l \n#$ -N calcdepth # job name,anything you want
+#$ -l h_rt=24:00:00
+#$ -M james.e.fifer@gmail.com #your email
+#$ -m as # email only if aborted or suspended,
+chmod 777 finddepth
+./finddepth
+module load R
+Rscript calcdepth.R' >runcalcdepth.sh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
