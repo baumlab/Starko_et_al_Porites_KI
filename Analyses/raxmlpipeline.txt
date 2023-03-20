@@ -1,0 +1,131 @@
+#$ -V # inherit the submission environment
+#$ -cwd # start job in submission directory
+#$ -N setup  # job name, anything you want
+#$ -l h_rt=12:00:00 #maximum run time
+#$ -M james.e.fifer@gmail.com #your email
+#$ -m be
+
+#166 inds
+#alt min ind depth 1 2 4
+# maf
+#80%minInd 132 70% 116 60% 100 90% 149
+
+
+#The goal here is to create lots of trees with different filters in order to to see if phylogenetic relationships are consistent throughout.
+#You can try adding -snp p val and heterozygosity filters if you like to see how those change the results as well.
+#I would run with admixed individuals
+#Also best practice is to include an outgroup (you could just use another 2bRAD'd coral from a different genus, 3-4 samples is enough). I did not do that here as it can reduce the number of loci (especially for the stricter filters),
+#but ideally once determining the filters you will use for the final representative figure you could re-run everything using the final filters WITH an outgroup.
+
+#NEED -doGeno 2 here for genotype calling
+echo -e '#!/bin/bash -l \n#$ -N raxml_runs_finaltrees # job name,anything you want
+#$ -l h_rt=12:00:00 \n#$ -M james.e.fifer@gmail.com #your email
+#$ -m as # email only if aborted or suspended
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 25 -minQ 30 -dosnpstat 1 -doHWE 1 -sb_pval 1e-3 -maxHetFreq 0.5 -hetbias_pval 1e-3 -skipTriallelic 1 -minInd 53 -minMaf 0.05"
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 2 -doBcf 1 -doPost 1 -doGlf 2"
+/projectnb/davieslab/jfifer/Japan_rad/angsd/angsd -b ../bamscl -GL 1 $FILTERS $TODO -P 1 -out raxmlout' > filter.sh
+
+
+module load bcftools/2019-08-30_git63f4b93
+for i in *.bcf; do bcftools view $i> ${i/%.bcf}.vcf; done
+#remove outlier sites
+#add dos2unix OutlierSites4RAXML.txt if bringing it from R
+
+
+#grep -vf bayeOuts AllSitesDemo.sites > sites2do_filtBaye
+for i in *.vcf; do grep -Fwvf ../Demographic/bayeOuts $i > Neut.$i; done
+for i in Neut*.vcf; do /projectnb/davieslab/jfifer/Japan_rad/admixed_pops_analysis/4pop_analysis/Demographic_Analysis_II/Phylogenetic_Tree/vcf2phylip.py -i $i -m 0; done
+#phyallpops should look like
+#pop1
+#pop2
+#pop3
+#And the first row should be blank
+#do dos2unix if you are bringing this file from R
+for i in *phy; do sed 's/^.*rad\///' $i > tmp.$i; paste -d / phyallpops tmp.$i | sed  '1s/^.//' >$i; rm -f tmp.$i; done
+#Neut.Dep1.minInd100.minmaf0.001.phy
+for i in *.phy; do echo "raxmlHPC-PTHREADS -T 10 -m GTRGAMMA -n ${i/%.phy} -s $i -p "\$RAN_SEED" -x  "\$RAN_SEED" -# 100" >> runsraxml; done
+
+
+echo -e '#!/bin/bash -l \n#$ -N raxml_runs_finaltrees # job name,anything you want
+#$ -l h_rt=12:00:00 \n#$ -M james.e.fifer@gmail.com #your email
+#$ -m as # email only if aborted or suspended
+#$ -pe omp 2
+module load raxml
+AN_SEED=`od -An -N4 -i /dev/random`
+RAN_SEED=$(bc <<< "scale=0; sqrt($AN_SEED*$AN_SEED)")
+echo Random seed: $RAN_SEED
+readarray -t CMD_ARRAY < runsraxml
+
+INDEX=$(($SGE_TASK_ID-1))
+
+echo Executing command:  "${CMD_ARRAY[$INDEX]}"
+eval "${CMD_ARRAY[$INDEX]}"'> runsraxml.sh
+#qsub runsraxml.sh
+
+
+##for each run if runs are aborted
+grep -L 'All 100 bootstrapped trees written to' *info* > unfinished.txt
+sed -i 's/^RAxML_info\.*//' unfinished.txt
+grep -Ff unfinished.txt runsraxml > runsraxml_4
+while read p; do   echo "rm -f *info*$p; rm -f *boot*$p"; done <unfinished.txt >removethese
+./removethese
+##run runsraxml.sh with new # and time (would run for 24 hours this time)
+##can also increase number of threads with -T
+
+#Once bootstrapping is done we can create ML trees.
+##I believe there is a way to do this all in one run instead of seperate runs, but next find ML
+#Let's execute: raxmlHPC -m GTRGAMMA -p 12345 -# 20 -s dna.phy -n T13 This command will generate 20 ML trees on distinct starting trees and also print the tree with the best likelihood to a file called RAxML_bestTree.
+#need to remove all files with "info" beforehand
+rm -f *info*
+
+for i in *.phy; do echo "raxmlHPC-PTHREADS -T 10 -m GTRGAMMA -n ${i/%.phy} -s $i -p "\$RAN_SEED" -# 20" >> runsraxml_ML; done
+
+echo -e '#!/bin/bash -l \n#$ -N raxml_runs_ML_1 # job name,anything you want
+#$ -l h_rt=12:00:00 \n#$ -M james.e.fifer@gmail.com #your email
+#$ -m as # email only if aborted or suspended
+#$ -pe omp 10
+module load raxml
+AN_SEED=`od -An -N4 -i /dev/random`
+RAN_SEED=$(bc <<< "scale=0; sqrt($AN_SEED*$AN_SEED)")
+echo Random seed: $RAN_SEED
+readarray -t CMD_ARRAY < runsraxml_ML
+
+INDEX=$(($SGE_TASK_ID-1))
+
+echo Executing command:  "${CMD_ARRAY[$INDEX]}"
+eval "${CMD_ARRAY[$INDEX]}"'> runsraxml_ML.sh
+#qsub runsraxml_ML.sh
+
+#If any runs were aborted do the following:
+grep -L 'Final GAMMA-based Score of best tree' *info* > unfinished.txt
+sed -i 's/^RAxML_info\.*//' unfinished.txt
+while read p; do   echo "rm -f *info*$p; rm -f *RAxML_result*$p*; rm -f *_parsimonyTree*$p*; rm -f *RAxML_log.*$p*; rm -f *RAxML_bestTree.*$p*"; done <unfinished.txt >removethese
+./removethese
+grep -Ff unfinished.txt runsraxml_ML > runsraxml_ML_5
+#I gave up on RAxML_info.Neut.Dep1.minInd100.minmaf0.min0 it was still not converging after 76 hrs
+
+#MAKE SURE YOU REMOVE ALL *info* FILES BEFORE RUNNING THE NEXT LINE OTHERWISE YOU WILL GET AN ERROR ABOUT FILE ALREADY EXISITING
+rm -f *info*
+for i in *.phy; do echo "raxmlHPC-PTHREADS -T 2 -m GTRGAMMA -p "\$RAN_SEED" -f b -t RAxML_bestTree.${i/%.phy} -z RAxML_bootstrap.${i/%.phy} -n ${i/%.phy}" >> runraxml_finaltrees; done
+
+
+
+##Viewing trees
+#module load java
+#java -jar /usr4/bi594/jfifer/bin/FigTree_v1.4.4/lib/figtree.jar RAxML_bipartitionsBranchLabels.Neut.Dep1.minInd132.minmaf0.05.min0
+#Below is the final tree for visualization
+#RAxML_bipartitionsBranchLabels.Neut.Dep1.minInd132.minmaf0.05.min0
+#^ Node and Branch labels will be the same but these are branch support values, not node support values
+
+
+#scp bipartions file and bootstrap file and use raxml_plots.R to visualize/manipulate tree
+
+#1883 loci (wc -l vcf)
+
+#calculate missing data info for supplementary material:
+#paste <(bcftools query -f '[%SAMPLE\t]\n' Dep1.minInd126.minmaf0.05.vcf | head -1 | tr '\t' '\n') <(bcftools query -f '[%GT\t]\n' Dep1.minInd126.minmaf0.05.vcf | awk -v OFS="\t" '{for (i=1;i<=NF;i++) if ($i == "./.") sum[i]+=1 } END {for (i in sum) print i, sum[i] / NR }' | sort -k1,1n | cut -f 2) >missingdatainfo_RAXML.txt
+
+
+
+
+
