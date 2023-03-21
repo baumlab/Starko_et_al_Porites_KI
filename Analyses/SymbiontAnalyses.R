@@ -345,7 +345,7 @@ C15_lineage2 <- C15_ps %>% subset_samples(coral_tag %in% Lineage2$coral_tag)
 
 
 #######Ordination plot with dada2 ASV matrix
-load(file="./Dada2/PoritesOnly/Cladocopium_ASV_Jan17.RData")
+load(file="./dada2/Cladocopium_ASV_Jan17.RData")
 Clad_ASV
 sample_data(Clad_ASV)
 Clad_filtered <- subset_samples(Clad_ASV, !(sample_sums(Clad_ASV) < 500))

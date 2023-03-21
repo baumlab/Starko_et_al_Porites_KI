@@ -1,9 +1,9 @@
 #####This script is for testing for a correlation between host phylogeny (based on RADSeq data) and coral symbiont (based on individual DIVs, ITS2 profiles and unifrac distance based on symportal outputs)
 
 #Read in tree file
-PorTree <- read.tree("./Data/Porites_RAD_likelihoodTree.tree")
+PorTree <- read.tree("./Data/Coevolution/Porites_RAD_likelihoodTree.tree")
 #Read in reference data
-Coevol_meta <- read_csv("./Data/Porites_coevolution_meta.csv")
+Coevol_meta <- read_csv("./Data/Coevolution/Porites_coevolution_meta.csv")
 #Check whether tip labels and datasheet match up
 PorTree$tip.label %in% Coevol_meta$filename
 #Remove samples not included in tree (e.g., duplicates or failed samples)
@@ -161,7 +161,7 @@ Ktest$V2 %>% hist(seq(0,1,0.05))
 tree_matrix <- cophenetic(PorTree)
 
 
-Clad_unifrac <- read_csv("./Data/Clad_unifracdist.csv")
+Clad_unifrac <- read_csv("./Data/Symbionts/Clad_unifracdist.csv")
 unifrac_dist <- Clad_unifrac[2:2125] %>% as.matrix
 rownames(unifrac_dist) <- colnames(unifrac_dist)
 
