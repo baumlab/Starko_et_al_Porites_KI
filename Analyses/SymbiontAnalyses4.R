@@ -33,6 +33,7 @@ sym_average <- sym_compare2 %>%
   group_by(timeframe, Lineage) %>% 
   summarise_all(funs(mean)) 
 
+#Convert data to long-form
 sym_long<- sym_average %>% filter(Lineage!="NA") %>% gather(key="Profile", value="Abundance", 3:115)
 
 sym_long$timeframe <- factor(sym_long$timeframe, levels = c("Before", "After"), ordered = TRUE)
@@ -141,7 +142,7 @@ DIV_sample <- sample_data(DIV_comb)
 DIV_comb_otu2 <- DIV_comb_otu[,which(colSums(DIV_comb_otu) > 0 )]
 DIV_comb2<- phyloseq(DIV_sample, DIV_comb_otu2)
 
-#Ordinations
+######Exploratory ordinations
 ##All samples
 ord <- ordinate(DIV_comb2, method = "PCoA", distance = "bray")
 plot_ordination(DIV_comb2, ord, color = "expedition")+
@@ -226,6 +227,7 @@ plot_ordination(C15_ps, ord, color = "AllLins.Lineage", shape = "AllLins.Lineage
 ##Figure 2 panel#####
 #####################
 
+#Extract each year
 C15_2014 <- subset_samples(C15_ps, expedition=="2014")
 C15_2015b <- subset_samples(C15_ps, expedition=="2015b")
 C15_2015c <- subset_samples(C15_ps, expedition=="2015c")
@@ -237,10 +239,10 @@ C15_2017 <- subset_samples(C15_ps, expedition=="2017")
 C15_2018 <- subset_samples(C15_ps, expedition=="2018")
 C15_2019 <- subset_samples(C15_ps, expedition=="2019")
 
+#Create phyloseq of only samples from after the heatwave
 C15_after <- merge_phyloseq(C15_2016b, C15_2017, C15_2018, C15_2019)
 
-##BEFORE
-
+##BEFORE HEATWAVE
 ord1plot <- plot_ordination(C15_before, ord, color = "AllLins.Lineage", shape = "AllLins.Lineage")+
   ggtitle("Before (DIVs)")+
   scale_colour_manual(values =c("#DFBE99","#729EA1","#DB5375", "grey", "grey"))+
@@ -250,6 +252,7 @@ ord1plot <- plot_ordination(C15_before, ord, color = "AllLins.Lineage", shape = 
   ylim(-0.5,0.8)+
   xlim(-0.7,0.7)
 
+##AFTER HEATWAVE
 ord2plot <- plot_ordination(C15_after, ord, color = "AllLins.Lineage", shape = "AllLins.Lineage")+
   ggtitle("After (DIVs)")+
   scale_colour_manual(values =c("#DFBE99","#729EA1","#DB5375", "grey", "grey"))+
@@ -259,19 +262,25 @@ ord2plot <- plot_ordination(C15_after, ord, color = "AllLins.Lineage", shape = "
   ylim(-0.5,0.8)+
   xlim(-0.7,0.7)
 
+#Plots
 ord1plot
 ord2plot
 
+#Note that NA and Unknown ellipses must be removed in post-processing of these figures; error refers to convergence failures for these ellipses
+
+#Remove colonies of unknown lineage
 C15_before2 <- subset_samples(C15_before, AllLins.Lineage!="Unknown")
 
+#Remove colonies of unknown lineage
 C15_after2 <- subset_samples(C15_after, AllLins.Lineage!="Unknown")
 
+#Fit before ordination
 ord_before <- ordinate(C15_before2, method = "PCoA", distance = "unifrac")
 
+#Fit after ordination
 ord_after <- ordinate(C15_after2, method = "PCoA", distance = "unifrac")
 
-
-
+#Plot ordinations
 plot_ordination(C15_before2, ord, color = "AllLins.Lineage", shape = "AllLins.Lineage")+
   ggtitle("All lineages PCoA - Unifrac (C15 only)")+
   scale_colour_manual(values =c("#DFBE99","#729EA1","#DB5375", "grey", "grey"))+
@@ -307,14 +316,17 @@ sample_data(C15_before2)$time <- "Before"
 sample_data(C15_after2)$time <- "After"
 metadata <- as(sample_data(C15_before2), "data.frame")
 
+#PERMANOVA of ITS2 profiles versus lineage (before heatwave)
 adonis2(phyloseq::distance(C15_before2, method="bray") ~ AllLins.Lineage,
        data = metadata)
 
 metadata <- as(sample_data(C15_after2), "data.frame")
 
+#PERMANOVA of ITS2 profiles versus lineage (after heatwave)
 adonis2(phyloseq::distance(C15_after2, method="bray") ~ AllLins.Lineage,
         data = metadata)
 
+#Make combined phyloseq object (before and after heatwave)
 C15_2 <- merge_phyloseq(C15_before2, C15_after2)
 
 
