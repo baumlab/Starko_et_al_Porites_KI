@@ -1,4 +1,4 @@
-#This script loads in the Porites SymPortal data, combines with coral tag-level metadata and produces some key but basic exploratory plots and statistics focused on survival and analysis of raw ITS2 profiles
+#####This script loads in the Porites SymPortal data, combines with coral tag-level metadata and produces some key but basic exploratory plots and statistics focused on survival and analysis of raw ITS2 profiles
 
 #Load in phyloseq objects
 load("./Data/Symbionts/Porites_Profiles2.RData")
