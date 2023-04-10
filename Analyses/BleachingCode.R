@@ -84,7 +84,7 @@ bleach_2015c <- read_excel("./Data/Coral_tracking/Mortality_and_bleaching.xlsx",
 #Remove colonies of unknown lineage
 bleach_2015c <- bleach_2015c %>% filter(Lineage!="NA") %>% filter(Lineage!="Unknown")
 
-#Contingency table of bleaching and lineage in 2015c
+1#Contingency table of bleaching and lineage in 2015c
 sum2015_1<- table(bleach_2015c$Lineage, bleach_2015c$Bleaching_KT_adj) %>% prop_row() %>% as.data.frame()
 
 #Make variables ordered factors
