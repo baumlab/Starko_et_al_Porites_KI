@@ -66,7 +66,7 @@ bleach_2016a <- read_excel("./Data/Coral_tracking/Mortality_and_bleaching.xlsx",
 bleach_2016a <- filter(bleach_2016a, Lineage!="NA") %>% filter(Lineage!="Unknown")
 
 #Contingency table of lineage versus bleaching status
-sum2016_1<- table(bleach_2016a$Lineage, bleach_2016a$Bleaching_KTadj) %>% prop_row() %>% as.data.frame()
+sum2016_1<- table(bleach_2016a$Lineage, bleach_2016a$Bleaching_KT_adj) %>% prop_row() %>% as.data.frame()
 
 #Convert variables to ordered factors
 sum2016_1$Var1 <- sum2016_1$Var1 %>% factor(ordered = TRUE, levels =  c("Red","Blue",  "Pale"))
@@ -102,7 +102,7 @@ plot15<- ggplot(sum2015_1, aes(x = Var1, y = Freq, fill = Var2, color = Var2))+
 bleach_2016a_2 <- bleach_2016a %>% filter(Lineage!="NA") %>% filter(Lineage!="Unknown")
 
 #Ordinal regression comparing bleaching versus lineage in 2016a
-vglm(factor(Bleaching_KTadj, ordered = TRUE) ~ Lineage, data = bleach_2016a_2, family = propodds) %>% anova()
+vglm(factor(Bleaching_KT_adj, ordered = TRUE) ~ Lineage, data = bleach_2016a_2, family = propodds) %>% anova()
 
 #Ordinal regression comparing bleaching versus lineage in 2015c
 vglm(factor(bleach_2015c$Bleaching_KT_adj, ordered = TRUE) ~ Lineage, data = bleach_2015c, family = propodds) %>% anova() 
@@ -112,3 +112,4 @@ plot_grid(plot15, plot16)
 
 #Plot grid
 plot_grid(plot15_1, plot16_1,plot15, plot16)
+
