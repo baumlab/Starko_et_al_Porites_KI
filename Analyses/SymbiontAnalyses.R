@@ -296,6 +296,7 @@ plot_ordination(C15_after2, ord, color = "AllLins.Lineage", shape = "AllLins.Lin
   stat_ellipse()
 
 
+
 ord2<- plot_ordination(C15_after2, ord_after, color = "AllLins.Lineage", shape = "AllLins.Lineage")+
   ggtitle("After")+
   scale_colour_manual(values =c("#DFBE99","#729EA1","#DB5375", "grey", "grey"))+
@@ -498,7 +499,7 @@ sym_df <- left_join(sym_df, pubnames)
 
 lineage.df <- AllLins[,c("Lineage", "coral_tag")]
 sym_df$coral_tag <- gsub("1016a_1346", "1016_1346", sym_df$coral_tag) #"a" is meaningless
-sym_df[155,13] <- as.numeric("1") #Have to change if initial dataframe changes, standardizing this sample
+sym_df[154,13] <- as.numeric("1") #Standardizing this sample
 sym_compare2 <- left_join(sym_df, lineage.df, by = "coral_tag")
 sym_compare2 %>% dim()
 
